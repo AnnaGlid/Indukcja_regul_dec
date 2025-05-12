@@ -4,9 +4,16 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import plot_tree
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
-data = pd.read_csv('nursery_preprocessed.csv')
-data_original = pd.read_csv('nursery.csv')
+and_deli = ' and '
+then_deli = ' then '
+if_deli = 'if '
+class_deli = 'class = '
+
+cwd = os.path.dirname(os.path.realpath(__file__))
+data = pd.read_csv(fr'{cwd}\data\nursery\nursery_preprocessed.csv')
+data_original = pd.read_csv(fr'{cwd}\data\nursery\nursery.csv')
 original_attributes = data_original.columns
 
 decision_class = 'class'
@@ -23,10 +30,6 @@ class_dict = {
     1: 'priority',
     2: 'spec_prior'
 }
-and_deli = ' and '
-then_deli = ' then '
-if_deli = 'if '
-class_deli = 'class = '
 
 results_depth_keys = [
     'trees_number', 'depth', 'depth_abs', 
@@ -198,17 +201,11 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame) -> dict:
     # support - covered rows (without decision) to all the rows
     support = covered / len(table)
 
-    # accuracy - correct predictions / all rows
-    accuracy = 0
-    applies = 0
+    # accuracy - correct predictions (tp) / all predictions (all rows)
+    correct_predictions = 0
     for cl in class_dict.values():
-        if sum(confusion_matrix[cl].values()) > 0:
-            accuracy += (confusion_matrix[cl]['tp'] + confusion_matrix[cl]['tn']) / sum(confusion_matrix[cl].values())
-            applies += 1
-    if applies: 
-        accuracy = accuracy/ applies
-    else:
-        accuracy = 'NaN'
+        correct_predictions += confusion_matrix[cl]['tp']
+    accuracy = correct_predictions / len(table)
 
     # recall - correctly classified as cl / all cl. Avg of recall of all the classes
     recall = sum([
@@ -265,19 +262,21 @@ def get_results_for_forest(forest, all_rules_forest):
     return results
 #endregion        
 
+REPETITION = 5
+
 for trees_number in trees_numbers:
     forest = RandomForestClassifier(n_estimators = trees_number)
     forest.fit(X_train, y_train)
     forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
-    for i in range(0, 5):
-        print(f'Getting results trees number: {trees_number} and depth: max_depth - {i}')
-        forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-i)
+    for depth_diff in range(0, 5):
+        print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}')
+        forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
         forest.fit(X_train, y_train)
         all_rules_forest = get_all_rules_from_forest(forest)
         for alpha, forest_results in get_results_for_forest(forest, all_rules_forest).items():
             results_depth['trees_number'].append(trees_number)
-            results_depth['depth'].append('max_depth' if not i else f'max_depth - {i}')
-            results_depth['depth_abs'].append(forest_max_depth - i)
+            results_depth['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
+            results_depth['depth_abs'].append(forest_max_depth - depth_diff)
             results_depth['alpha'].append(alpha)
             for k, v in forest_results.items():
                 results_depth[k].append(v)
@@ -295,6 +294,7 @@ for trees_number in trees_numbers:
             results_imp['alpha'].append(alpha)
             for k, v in forest_results.items():
                 results_imp[k].append(v)
+
 pd.DataFrame(results_depth).to_csv('results_depth.csv')
 pd.DataFrame(results_imp).to_csv('results_imp.csv')
 d=1
