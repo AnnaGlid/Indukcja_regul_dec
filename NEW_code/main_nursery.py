@@ -5,8 +5,8 @@ from sklearn.tree import plot_tree
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = pd.read_csv('algorithms/data/nursery_preprocessed.csv')
-data_original = pd.read_csv('algorithms/data/nursery.csv')
+data = pd.read_csv('nursery_preprocessed.csv')
+data_original = pd.read_csv('nursery.csv')
 original_attributes = data_original.columns
 
 decision_class = 'class'
@@ -100,7 +100,9 @@ def heuristic(all_rules_forest: set, decision: str, alpha: float) -> str:
     for rule in all_rules_forest:
         if get_decision(rule) == decision:
             i0.add(rule)    
-    ii = [r for r in i0.copy() if get_descriptors(r)]
+    i0 = set([r for r in i0.copy() if get_descriptors(r)])
+    ii = set([r for r in i0.copy()])
+    d=1
     while len(i0.difference(ii)) < len(i0) * (1 - alpha):
         descriptors = set()
         for rule in ii:
@@ -177,7 +179,7 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame) -> dict:
         for rule in rule_set:
             if covers(rule, row):
                 rule_decision = get_decision(rule)
-                true_decision = row[decision_class]
+                true_decision =  row[decision_class]
                 if rule_decision == true_decision:
                     confusion_matrix[true_decision]['tp'] += 1
                     for dec in class_dict.values():
@@ -186,21 +188,24 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame) -> dict:
                 else:
                     confusion_matrix[rule_decision]['fp'] += 1
                     confusion_matrix[true_decision]['fn'] += 1
+                    for dec in class_dict.values():
+                        if dec not in [true_decision, rule_decision]:
+                            confusion_matrix[dec]['tn'] += 1                    
                 covered += 1
-                continue
+                break
 
 
     # support - covered rows (without decision) to all the rows
     support = covered / len(table)
 
-    # accuracy - correct predictions / all predictions
+    # accuracy - correct predictions / all rows
     accuracy = 0
     applies = 0
     for cl in class_dict.values():
         if sum(confusion_matrix[cl].values()) > 0:
             accuracy += (confusion_matrix[cl]['tp'] + confusion_matrix[cl]['tn']) / sum(confusion_matrix[cl].values())
             applies += 1
-    if applies:
+    if applies: 
         accuracy = accuracy/ applies
     else:
         accuracy = 'NaN'
