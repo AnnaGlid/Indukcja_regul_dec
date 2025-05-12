@@ -10,11 +10,30 @@ and_deli = ' and '
 then_deli = ' then '
 if_deli = 'if '
 class_deli = 'class = '
+trees_numbers = [5, 10, 15, 20, 25, 30]
+REPETITION = 5
+
 
 cwd = os.path.dirname(os.path.realpath(__file__))
 data = pd.read_csv(fr'{cwd}\data\nursery\nursery_preprocessed.csv')
 data_original = pd.read_csv(fr'{cwd}\data\nursery\nursery.csv')
 original_attributes = data_original.columns
+
+results_depth_keys = [
+    'trees_number', 'depth', 'depth_abs', 
+    'avg_nodes_count', 'avg_tree_depth', 
+    'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
+    'support', 'accuracy', 'recall', 'precision'
+]
+results_depth = {key: [] for key in results_depth_keys}
+results_imp_keys = [
+    'trees_number', 'impurity_decrease', 
+    'avg_nodes_count', 'avg_tree_depth', 
+    'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
+    'support', 'accuracy', 'recall', 'precision'
+]
+results_imp = {key: [] for key in results_imp_keys}
+
 
 decision_class = 'class'
 conditional = [col for col in data.columns if col != decision_class]
@@ -24,29 +43,12 @@ y_train = train[decision_class]
 X_test = test.drop(columns=[decision_class])
 y_test = test[decision_class]
 
-trees_numbers = [5, 10, 15, 20]
+
 class_dict = {
     0: 'not_recom',
     1: 'priority',
     2: 'spec_prior'
 }
-
-results_depth_keys = [
-    'trees_number', 'depth', 'depth_abs', 
-    'avg_nodes_count', 'avg_tree_depth', 
-    'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision'
-    # 'min_matching', 'max_matching', 'avg_matching'
-]
-results_depth = {key: [] for key in results_depth_keys}
-results_imp_keys = [
-    'trees_number', 'impurity_decrease', 
-    'avg_nodes_count', 'avg_tree_depth', 
-    'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision'
-    # 'min_matching', 'max_matching', 'avg_matching'
-]
-results_imp = {key: [] for key in results_imp_keys}
 
 #region functions
 def extract_rules(tree, feature_names, class_names=None):
@@ -164,7 +166,7 @@ def heuristic(all_rules_forest: set, decision: str, alpha: float) -> str:
     h_rule += f'{then_deli}{class_deli}{decision}'
     return h_rule
 
-def calculate_metrics(rule_set: set, table: pd.DataFrame) -> dict:
+def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: str) -> dict:
     confusion_matrix = {
         cl: {'tp': 0, 'tn': 0, 'fp': 0, 'fn': 0} for cl in class_dict.values()
     }
@@ -231,8 +233,7 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame) -> dict:
         'precision': round(precision, 4) if isinstance(precision, float) else precision
     }
 
-
-def get_results_for_forest(forest, all_rules_forest):
+def get_results_for_forest(forest, all_rules_forest, most_common_decision: str):
     results = {}
     trees_num = len(forest.estimators_)
     avg_nodes_count = round(sum(
@@ -257,23 +258,25 @@ def get_results_for_forest(forest, all_rules_forest):
             'max_rule_len': max(rules_length),
             'avg_rule_len': round(sum(rules_length) / len(rules_length), 4)
         }
-        metrics = calculate_metrics(rules, test)
+        metrics = calculate_metrics(rules, test, most_common_decision)
         results[alpha] = results[alpha] | metrics
     return results
 #endregion        
 
-REPETITION = 5
 
 for trees_number in trees_numbers:
     forest = RandomForestClassifier(n_estimators = trees_number)
     forest.fit(X_train, y_train)
     forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
+    class_occurence = {val: list(y_train).count(val) for val in set(y_train.values)}
+    max_occurence = max(class_occurence.values())
+    most_common_decision = next(filter(lambda x: class_occurence[x] == max_occurence, class_occurence))
     for depth_diff in range(0, 5):
         print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}')
         forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
         forest.fit(X_train, y_train)
         all_rules_forest = get_all_rules_from_forest(forest)
-        for alpha, forest_results in get_results_for_forest(forest, all_rules_forest).items():
+        for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision).items():
             results_depth['trees_number'].append(trees_number)
             results_depth['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
             results_depth['depth_abs'].append(forest_max_depth - depth_diff)
