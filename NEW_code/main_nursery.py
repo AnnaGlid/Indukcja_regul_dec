@@ -10,11 +10,9 @@ and_deli = ' and '
 then_deli = ' then '
 if_deli = 'if '
 class_deli = 'class = '
-# trees_numbers = [5, 10, 15, 20, 25, 30]
-# REPETITION = 5
+trees_numbers = [5, 10, 15, 20, 25, 30]
+REPETITION = 5
 
-trees_numbers = [5, 10, 15]
-REPETITION = 3
 
 cwd = os.path.dirname(os.path.realpath(__file__))
 data = pd.read_csv(fr'{cwd}\data\nursery\nursery_preprocessed.csv')
@@ -322,7 +320,7 @@ for repeat in range(REPETITION):
             forest.fit(X_train, y_train)
             all_rules_forest = get_all_rules_from_forest(forest)
             d=1
-            for alpha, forest_results in get_results_for_forest(forest, all_rules_forest).items():
+            for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision).items():
                 results_imp_i['trees_number'].append(trees_number)
                 results_imp_i['impurity_decrease'].append(imp_decrease)
                 results_imp_i['alpha'].append(alpha)
@@ -334,37 +332,41 @@ results_depth = {}
 for col, values in results_depth_i.items():
     if col in ['trees_number', 'depth', 'alpha']:
         results_depth[col] = values
-    else:
-        results_depth[col] = []
+    else:        
         if col in ['support', 'accuracy', 'precision', 'recall']:
             new_col = 'avg_' + col
-            results_depth['min_'+col].append(min([results_depth_rep[idx_rep]['accuracy'][idx_val]
-                                       for idx_rep in range(REPETITION)]))
-            results_depth['max_'+col].append(max([results_depth_rep[idx_rep]['accuracy'][idx_val]
-                                       for idx_rep in range(REPETITION)]))                      
+            results_depth['min_'+col] = []
+            results_depth['max_'+col] = []
+            for idx_val, val in enumerate(values):
+                vals = [results_depth_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]
+                results_depth['min_'+col].append(min(vals))
+                results_depth['max_'+col].append(max(vals))
         else:
             new_col = col
+        results_depth[new_col] = []
         for idx_val, val in enumerate(values):            
-            results_depth[new_col].append(sum([results_depth_rep[idx_rep][new_col][idx_val]
-                                       for idx_rep in range(REPETITION)])) / REPETITION
+            results_depth[new_col].append(sum([results_depth_rep[idx_rep][col][idx_val]
+                                       for idx_rep in range(REPETITION)]) / REPETITION)
 
 results_imp = {}
 for col, values in results_imp_i.items():
     if col in ['trees_number', 'depth', 'alpha']:
         results_imp[col] = values
-    else:
-        results_imp[col] = []
+    else:        
         if col in ['support', 'accuracy', 'precision', 'recall']:
             new_col = 'avg_' + col
-            results_imp['min_'+col].append(min([results_imp_rep[idx_rep]['accuracy'][idx_val]
-                                       for idx_rep in range(REPETITION)]))
-            results_imp['max_'+col].append(max([results_imp_rep[idx_rep]['accuracy'][idx_val]
-                                       for idx_rep in range(REPETITION)]))                      
+            results_imp['min_'+col] = []
+            results_imp['max_'+col] = []
+            for idx_val, val in enumerate(values):
+                vals = [results_imp_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]
+                results_imp['min_'+col].append(min(vals))
+                results_imp['max_'+col].append(max(vals))
         else:
             new_col = col
+        results_imp[new_col] = []
         for idx_val, val in enumerate(values):            
-            results_imp[new_col].append(sum([results_imp_rep[idx_rep][new_col][idx_val]
-                                       for idx_rep in range(REPETITION)])) / REPETITION
+            results_imp[new_col].append(sum([results_imp_rep[idx_rep][col][idx_val]
+                                       for idx_rep in range(REPETITION)]) / REPETITION)
 
 pd.DataFrame(results_depth_i).to_csv('results_depth.csv')
 pd.DataFrame(results_imp_i).to_csv('results_imp.csv')
