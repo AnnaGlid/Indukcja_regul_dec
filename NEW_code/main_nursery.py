@@ -23,14 +23,20 @@ results_depth_keys = [
     'trees_number', 'depth', 'depth_abs', 
     'avg_nodes_count', 'avg_tree_depth', 
     'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision'
+    'min_support', 'max_support', 'avg_support', 
+    'min_accuracy', 'max_accuracy', 'avg_accuracy', 
+    'min_recall', 'max_recall', 'avg_recall', 
+    'min_precision', 'max_precision', 'avg_precision'
 ]
 results_depth = {key: [] for key in results_depth_keys}
 results_imp_keys = [
     'trees_number', 'impurity_decrease', 
     'avg_nodes_count', 'avg_tree_depth', 
     'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision'
+    'min_support', 'max_support', 'avg_support', 
+    'min_accuracy', 'max_accuracy', 'avg_accuracy', 
+    'min_recall', 'max_recall', 'avg_recall', 
+    'min_precision', 'max_precision', 'avg_precision'
 ]
 results_imp = {key: [] for key in results_imp_keys}
 
