@@ -198,6 +198,19 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
                             confusion_matrix[dec]['tn'] += 1                    
                 covered += 1
                 break
+        # None of the rules applied to this row
+        true_decision = row[decision_class]
+        if most_common_decision == true_decision:
+            confusion_matrix[true_decision]['tp'] += 1
+            for dec in class_dict.values():
+                if dec != true_decision:
+                    confusion_matrix[dec]['tn'] += 1
+        else:
+            confusion_matrix[most_common_decision]['fp'] += 1
+            confusion_matrix[true_decision]['fn'] += 1
+            for dec in class_dict.values():
+                if dec not in [true_decision, most_common_decision]:
+                    confusion_matrix[dec]['tn'] += 1                    
 
 
     # support - covered rows (without decision) to all the rows
