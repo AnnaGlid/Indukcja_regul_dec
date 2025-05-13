@@ -288,13 +288,13 @@ max_occurence = max(class_occurence.values())
 most_common_decision = next(filter(lambda x: class_occurence[x] == max_occurence, class_occurence))
     
 results_depth_rep = []
+forest = RandomForestClassifier(n_estimators = trees_numbers[0])
+forest.fit(X_train, y_train)
+forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
 for repeat in range(REPETITION):
     results_depth_i = {key: [] for key in results_depth_keys}
     for trees_number in trees_numbers:
-        forest = RandomForestClassifier(n_estimators = trees_number)
-        forest.fit(X_train, y_train)
-        forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
-        for depth_diff in range(0, 5):        
+        for depth_diff in range(0, forest_max_depth - 1):        
             print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}')
             forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
             forest.fit(X_train, y_train)
@@ -368,8 +368,8 @@ for col, values in results_imp_i.items():
             results_imp[new_col].append(sum([results_imp_rep[idx_rep][col][idx_val]
                                        for idx_rep in range(REPETITION)]) / REPETITION)
 
-pd.DataFrame(results_depth_i).to_csv('results_depth.csv')
-pd.DataFrame(results_imp_i).to_csv('results_imp.csv')
+pd.DataFrame(results_depth).to_csv('results_depth.csv')
+pd.DataFrame(results_imp).to_csv('results_imp.csv')
 d=1
 
 
