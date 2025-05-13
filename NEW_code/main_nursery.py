@@ -5,6 +5,7 @@ from sklearn.tree import plot_tree
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import math
 
 and_deli = ' and '
 then_deli = ' then '
@@ -44,7 +45,7 @@ results_imp_keys = [
 
 decision_class = 'class'
 conditional = [col for col in data.columns if col != decision_class]
-train, test = train_test_split(data, test_size=0.3)
+train, test = train_test_split(data, test_size=0.3, stratify=data[decision_class])
 X_train = train.drop(columns=[decision_class])
 y_train = train[decision_class]
 X_test = test.drop(columns=[decision_class])
@@ -291,10 +292,11 @@ results_depth_rep = []
 forest = RandomForestClassifier(n_estimators = trees_numbers[0])
 forest.fit(X_train, y_train)
 forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
+min_required_depth = math.ceil(math.log(len(class_dict), 2))
 for repeat in range(REPETITION):
     results_depth_i = {key: [] for key in results_depth_keys}
     for trees_number in trees_numbers:
-        for depth_diff in range(0, forest_max_depth - 1):        
+        for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
             print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}')
             forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
             forest.fit(X_train, y_train)
@@ -332,15 +334,23 @@ results_depth = {}
 for col, values in results_depth_i.items():
     if col in ['trees_number', 'depth', 'alpha']:
         results_depth[col] = values
+    elif 'min_' in col:
+        for idx_val, val in enumerate(values):
+            results_depth[col] = min([results_depth_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]        )
+    elif 'max_' in col:
+        for idx_val, val in enumerate(values):
+            results_depth[col] = max([results_depth_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]        )        
     else:        
         if col in ['support', 'accuracy', 'precision', 'recall']:
             new_col = 'avg_' + col
             results_depth['min_'+col] = []
             results_depth['max_'+col] = []
+            results_depth['std_'+col] = []
             for idx_val, val in enumerate(values):
                 vals = [results_depth_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]
                 results_depth['min_'+col].append(min(vals))
                 results_depth['max_'+col].append(max(vals))
+                results_depth['std_'+col].append(np.std(vals))
         else:
             new_col = col
         results_depth[new_col] = []
@@ -357,10 +367,12 @@ for col, values in results_imp_i.items():
             new_col = 'avg_' + col
             results_imp['min_'+col] = []
             results_imp['max_'+col] = []
+            results_imp['std_'+col] = []
             for idx_val, val in enumerate(values):
                 vals = [results_imp_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]
                 results_imp['min_'+col].append(min(vals))
                 results_imp['max_'+col].append(max(vals))
+                results_imp['std_'+col].append(np.std(vals))
         else:
             new_col = col
         results_imp[new_col] = []
