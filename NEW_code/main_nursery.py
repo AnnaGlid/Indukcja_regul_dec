@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import math
+from sklearn.metrics import accuracy_score, classification_report
 
 and_deli = ' and '
 then_deli = ' then '
@@ -24,21 +25,27 @@ results_depth_keys = [
     'trees_number', 'depth', 'depth_abs', 
     'avg_nodes_count', 'avg_tree_depth', 
     'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision'
-    # 'min_support', 'max_support', 'avg_support',     
-    # 'min_accuracy', 'max_accuracy', 'avg_accuracy', 
-    # 'min_recall', 'max_recall', 'avg_recall', 
-    # 'min_precision', 'max_precision', 'avg_precision'
+    'support', 'accuracy', 'recall', 'precision',
+    'rules_number'
 ]
 results_imp_keys = [
     'trees_number', 'impurity_decrease', 
     'avg_nodes_count', 'avg_tree_depth', 
     'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision'
-    # 'min_support', 'max_support', 'avg_support', 
-    # 'min_accuracy', 'max_accuracy', 'avg_accuracy', 
-    # 'min_recall', 'max_recall', 'avg_recall', 
-    # 'min_precision', 'max_precision', 'avg_precision'
+    'support', 'accuracy', 'recall', 'precision',
+    'rules_number'
+]
+results_forest_keys =  [
+    'trees_number',
+    'avg_nodes_count', 'avg_tree_depth', 
+    'accuracy', 'recall', 'precision'
+]
+results_ir_keys = [
+    'trees_number',
+    'avg_nodes_count', 'avg_tree_depth', 
+    'min_rule_len', 'max_rule_len', 'avg_rule_len',
+    'support', 'accuracy', 'recall', 'precision',
+    'rules_number'
 ]
 
 
@@ -277,112 +284,162 @@ def get_results_for_forest(forest, all_rules_forest, most_common_decision: str):
             'avg_tree_depth': avg_tree_depth,
             'min_rule_len': min(rules_length),
             'max_rule_len': max(rules_length),
-            'avg_rule_len': round(sum(rules_length) / len(rules_length), 4)
+            'avg_rule_len': round(sum(rules_length) / len(rules_length), 4),
+            'rules_number': len(rules)
         }
         metrics = calculate_metrics(rules, test, most_common_decision)
         results[alpha] = results[alpha] | metrics
     return results
+
+def save_results(results_rep: list[dict], filename: str):
+    results = {}
+    for col, values in results_rep[0].items():
+        if col in ['trees_number', 'depth', 'alpha']:
+            results[col] = values
+        elif 'min_' in col:
+            for idx_val, val in enumerate(values):
+                results[col] = min([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]        )
+        elif 'max_' in col:
+            for idx_val, val in enumerate(values):
+                results[col] = max([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]        )        
+        else:        
+            if col in ['support', 'accuracy', 'precision', 'recall']:
+                new_col = 'avg_' + col
+                results['min_'+col] = []
+                results['max_'+col] = []
+                results['std_'+col] = []
+                for idx_val, val in enumerate(values):
+                    vals = [results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]
+                    results['min_'+col].append(min(vals))
+                    results['max_'+col].append(max(vals))
+                    results['std_'+col].append(np.std(vals))
+            else:
+                new_col = col
+            results[new_col] = []
+            for idx_val, val in enumerate(values):            
+                results[new_col].append(sum([results_rep[idx_rep][col][idx_val]
+                                        for idx_rep in range(REPETITION)]) / REPETITION)  
+    pd.DataFrame(results).to_csv(f'{filename}.csv')  
 #endregion        
 
 class_occurence = {val: list(y_train).count(val) for val in set(y_train.values)}
 max_occurence = max(class_occurence.values())
 most_common_decision = next(filter(lambda x: class_occurence[x] == max_occurence, class_occurence))
     
-results_depth_rep = []
+
 forest = RandomForestClassifier(n_estimators = trees_numbers[0])
 forest.fit(X_train, y_train)
 forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
 min_required_depth = math.ceil(math.log(len(class_dict), 2))
-for repeat in range(REPETITION):
-    results_depth_i = {key: [] for key in results_depth_keys}
-    for trees_number in trees_numbers:
-        for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
-            print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}')
-            forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
-            forest.fit(X_train, y_train)
-            all_rules_forest = get_all_rules_from_forest(forest)
-            for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision).items():
-                results_depth_i['trees_number'].append(trees_number)
-                results_depth_i['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
-                results_depth_i['depth_abs'].append(forest_max_depth - depth_diff)
-                results_depth_i['alpha'].append(alpha)
-                for k, v in forest_results.items():
-                    results_depth_i[k].append(v)
-    results_depth_rep.append(results_depth_i)
 
+if True:
+    #region expreriments: max tree depth
+    results_depth_rep = []
+    for repeat in range(REPETITION):
+        results_depth_i = {key: [] for key in results_depth_keys}
+        for trees_number in trees_numbers:
+            for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
+                print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}')
+                forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
+                forest.fit(X_train, y_train)
+                all_rules_forest = get_all_rules_from_forest(forest)
+                for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision).items():
+                    results_depth_i['trees_number'].append(trees_number)
+                    results_depth_i['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
+                    results_depth_i['depth_abs'].append(forest_max_depth - depth_diff)
+                    results_depth_i['alpha'].append(alpha)
+                    for k, v in forest_results.items():
+                        results_depth_i[k].append(v)
+        results_depth_rep.append(results_depth_i)
+    save_results(results_depth_rep, 'results_depth')
+    #endregion
 
-results_imp_rep = []
-for repeat in range(REPETITION):
-    results_imp_i = {key: [] for key in results_imp_keys}           
-    for trees_number in trees_numbers:        
-        for imp_decrease in np.arange(0, 0.2, 0.05):
-            imp_decrease = round(imp_decrease, 2)
-            print(f'Getting results for {trees_number} and impurity decrease: {imp_decrease}')
-            forest = RandomForestClassifier(n_estimators = trees_number, min_impurity_decrease = imp_decrease)
-            forest.fit(X_train, y_train)
-            all_rules_forest = get_all_rules_from_forest(forest)
-            d=1
-            for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision).items():
-                results_imp_i['trees_number'].append(trees_number)
-                results_imp_i['impurity_decrease'].append(imp_decrease)
-                results_imp_i['alpha'].append(alpha)
-                for k, v in forest_results.items():
-                    results_imp_i[k].append(v)
-    results_imp_rep.append(results_imp_i)
+if False:
+    #region expreriments: impurity decrease
+    results_imp_rep = []
+    for repeat in range(REPETITION):
+        results_imp_i = {key: [] for key in results_imp_keys}           
+        for trees_number in trees_numbers:        
+            for imp_decrease in np.arange(0, 0.2, 0.05):
+                imp_decrease = round(imp_decrease, 2)
+                print(f'Getting results for {trees_number} and impurity decrease: {imp_decrease}')
+                forest = RandomForestClassifier(n_estimators = trees_number, min_impurity_decrease = imp_decrease)
+                forest.fit(X_train, y_train)
+                all_rules_forest = get_all_rules_from_forest(forest)
+                d=1
+                for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision).items():
+                    results_imp_i['trees_number'].append(trees_number)
+                    results_imp_i['impurity_decrease'].append(imp_decrease)
+                    results_imp_i['alpha'].append(alpha)
+                    for k, v in forest_results.items():
+                        results_imp_i[k].append(v)
+        results_imp_rep.append(results_imp_i)
+    save_results(results_imp_rep, 'results_imp')
+    #endregion
 
-results_depth = {}
-for col, values in results_depth_i.items():
-    if col in ['trees_number', 'depth', 'alpha']:
-        results_depth[col] = values
-    elif 'min_' in col:
-        for idx_val, val in enumerate(values):
-            results_depth[col] = min([results_depth_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]        )
-    elif 'max_' in col:
-        for idx_val, val in enumerate(values):
-            results_depth[col] = max([results_depth_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]        )        
-    else:        
-        if col in ['support', 'accuracy', 'precision', 'recall']:
-            new_col = 'avg_' + col
-            results_depth['min_'+col] = []
-            results_depth['max_'+col] = []
-            results_depth['std_'+col] = []
-            for idx_val, val in enumerate(values):
-                vals = [results_depth_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]
-                results_depth['min_'+col].append(min(vals))
-                results_depth['max_'+col].append(max(vals))
-                results_depth['std_'+col].append(np.std(vals))
-        else:
-            new_col = col
-        results_depth[new_col] = []
-        for idx_val, val in enumerate(values):            
-            results_depth[new_col].append(sum([results_depth_rep[idx_rep][col][idx_val]
-                                       for idx_rep in range(REPETITION)]) / REPETITION)
+if False:
+    #region expreriments: random forest
+    results_forest_rep = []
+    for repeat in range(REPETITION):
+        results_forest_i = {key: [] for key in results_forest_keys}
+        for trees_number in trees_numbers:
+            for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
+                print(f'Getting results trees number: {trees_number} and depth: {depth_diff}- RandomForest')
+                forest = RandomForestClassifier(n_estimators = trees_number)
+                forest.fit(X_train, y_train)           
+                y_pred_test = forest.predict(X_test)       
+                class_report = classification_report(y_test, y_pred_test, output_dict=True)    
+                trees_num = len(forest.estimators_)
+                avg_nodes_count = round(sum(
+                    [estimator.tree_.node_count for estimator in forest.estimators_]
+                ) / trees_num, 4)
+                avg_tree_depth = round(sum(
+                    [estimator.tree_.max_depth for estimator in forest.estimators_]
+                ) / trees_num, 4)           
+                results_forest_i['trees_number'].append(trees_number)
+                results_forest_i['avg_nodes_count'].append(avg_nodes_count)
+                results_forest_i['avg_tree_depth'].append(avg_tree_depth)
+                results_forest_i['accuracy'] = class_report['accuracy']
+                results_forest_i['recall'] = class_report['macro avg']['recall']
+                results_forest_i['precision'] = class_report['macro avg']['precision']
+        results_forest_rep.append(results_forest_i)
+    save_results(results_forest_rep, 'results_forest')
+    #endregion
 
-results_imp = {}
-for col, values in results_imp_i.items():
-    if col in ['trees_number', 'depth', 'alpha']:
-        results_imp[col] = values
-    else:        
-        if col in ['support', 'accuracy', 'precision', 'recall']:
-            new_col = 'avg_' + col
-            results_imp['min_'+col] = []
-            results_imp['max_'+col] = []
-            results_imp['std_'+col] = []
-            for idx_val, val in enumerate(values):
-                vals = [results_imp_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]
-                results_imp['min_'+col].append(min(vals))
-                results_imp['max_'+col].append(max(vals))
-                results_imp['std_'+col].append(np.std(vals))
-        else:
-            new_col = col
-        results_imp[new_col] = []
-        for idx_val, val in enumerate(values):            
-            results_imp[new_col].append(sum([results_imp_rep[idx_rep][col][idx_val]
-                                       for idx_rep in range(REPETITION)]) / REPETITION)
+if False:
+    #region expreriments: inner rules
+    results_ir_rep = []
+    for repeat in range(REPETITION):
+        results_ir_i = {key: [] for key in results_ir_keys}
+        for trees_number in trees_numbers:
+            for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
+                print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}: Inner Rules')
+                forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
+                forest.fit(X_train, y_train)
+                all_rules_forest = get_all_rules_from_forest(forest)
+                trees_num = len(forest.estimators_)
+                avg_nodes_count = round(sum(
+                    [estimator.tree_.node_count for estimator in forest.estimators_]
+                ) / trees_num, 4)
+                avg_tree_depth = round(sum(
+                    [estimator.tree_.max_depth for estimator in forest.estimators_]
+                ) / trees_num, 4)    
 
-pd.DataFrame(results_depth).to_csv('results_depth.csv')
-pd.DataFrame(results_imp).to_csv('results_imp.csv')
-d=1
+                rules = set(all_rules_forest)
+                rules_length = [rule.split(then_deli)[0].count('=') for rule in rules]
+                results_ir_i = {
+                    'trees_number': trees_num,
+                    'avg_nodes_count': avg_nodes_count,
+                    'avg_tree_depth': avg_tree_depth,
+                    'min_rule_len': min(rules_length),
+                    'max_rule_len': max(rules_length),
+                    'avg_rule_len': round(sum(rules_length) / len(rules_length), 4),
+                    'rules_number': len(rules)
+                }
+                metrics = calculate_metrics(rules, test, most_common_decision)
+                results_ir_i = results_ir_i | metrics                
+        results_ir_rep.append(results_ir_i)    
+    save_results(results_ir_rep, 'results_inner_rules')
+    #endregion
 
-
-
+print('Koniec')
