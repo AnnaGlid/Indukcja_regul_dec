@@ -298,10 +298,10 @@ def save_results(results_rep: list[dict], filename: str):
             results[col] = values
         elif 'min_' in col:
             for idx_val, val in enumerate(values):
-                results[col] = min([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]        )
+                results[col].append(min([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]))
         elif 'max_' in col:
             for idx_val, val in enumerate(values):
-                results[col] = max([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]        )        
+                results[col].append(max([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]))
         else:        
             if col in ['support', 'accuracy', 'precision', 'recall']:
                 new_col = 'avg_' + col
@@ -332,7 +332,7 @@ forest.fit(X_train, y_train)
 forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
 min_required_depth = math.ceil(math.log(len(class_dict), 2))
 
-if True:
+if False:
     #region expreriments: max tree depth
     results_depth_rep = []
     for repeat in range(REPETITION):
@@ -377,7 +377,7 @@ if False:
     save_results(results_imp_rep, 'results_imp')
     #endregion
 
-if False:
+if True:
     #region expreriments: random forest
     results_forest_rep = []
     for repeat in range(REPETITION):
@@ -406,7 +406,7 @@ if False:
     save_results(results_forest_rep, 'results_forest')
     #endregion
 
-if False:
+if True:
     #region expreriments: inner rules
     results_ir_rep = []
     for repeat in range(REPETITION):
