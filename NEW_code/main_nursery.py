@@ -196,8 +196,10 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
         return True
     covered = 0    
     for index, row in table.iterrows():
+        row_is_covered = False
         for rule in rule_set:
             if covers(rule, row):
+                row_is_covered = True
                 rule_decision = get_decision(rule)
                 true_decision =  row[decision_class]
                 if rule_decision == true_decision:
@@ -214,18 +216,19 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
                 covered += 1
                 break
         # None of the rules applied to this row
-        true_decision = row[decision_class]
-        if most_common_decision == true_decision:
-            confusion_matrix[true_decision]['tp'] += 1
-            for dec in class_dict.values():
-                if dec != true_decision:
-                    confusion_matrix[dec]['tn'] += 1
-        else:
-            confusion_matrix[most_common_decision]['fp'] += 1
-            confusion_matrix[true_decision]['fn'] += 1
-            for dec in class_dict.values():
-                if dec not in [true_decision, most_common_decision]:
-                    confusion_matrix[dec]['tn'] += 1                    
+        if not row_is_covered:
+            true_decision = row[decision_class]
+            if most_common_decision == true_decision:
+                confusion_matrix[true_decision]['tp'] += 1
+                for dec in class_dict.values():
+                    if dec != true_decision:
+                        confusion_matrix[dec]['tn'] += 1
+            else:
+                confusion_matrix[most_common_decision]['fp'] += 1
+                confusion_matrix[true_decision]['fn'] += 1
+                for dec in class_dict.values():
+                    if dec not in [true_decision, most_common_decision]:
+                        confusion_matrix[dec]['tn'] += 1                    
 
 
     # support - covered rows (without decision) to all the rows
@@ -332,7 +335,7 @@ forest.fit(X_train, y_train)
 forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
 min_required_depth = math.ceil(math.log(len(class_dict), 2))
 
-if False:
+if True:
     #region expreriments: max tree depth
     results_depth_rep = []
     for repeat in range(REPETITION):
@@ -354,7 +357,7 @@ if False:
     save_results(results_depth_rep, 'results_depth')
     #endregion
 
-if False:
+if True:
     #region expreriments: impurity decrease
     results_imp_rep = []
     for repeat in range(REPETITION):
@@ -399,9 +402,9 @@ if True:
                 results_forest_i['trees_number'].append(trees_number)
                 results_forest_i['avg_nodes_count'].append(avg_nodes_count)
                 results_forest_i['avg_tree_depth'].append(avg_tree_depth)
-                results_forest_i['accuracy'] = class_report['accuracy']
-                results_forest_i['recall'] = class_report['macro avg']['recall']
-                results_forest_i['precision'] = class_report['macro avg']['precision']
+                results_forest_i['accuracy'].append(class_report['accuracy'])
+                results_forest_i['recall'].append(class_report['macro avg']['recall'])
+                results_forest_i['precision'].append(class_report['macro avg']['precision'])
         results_forest_rep.append(results_forest_i)
     save_results(results_forest_rep, 'results_forest')
     #endregion
@@ -427,17 +430,18 @@ if True:
 
                 rules = set(all_rules_forest)
                 rules_length = [rule.split(then_deli)[0].count('=') for rule in rules]
-                results_ir_i = {
-                    'trees_number': trees_num,
-                    'avg_nodes_count': avg_nodes_count,
-                    'avg_tree_depth': avg_tree_depth,
-                    'min_rule_len': min(rules_length),
-                    'max_rule_len': max(rules_length),
-                    'avg_rule_len': round(sum(rules_length) / len(rules_length), 4),
-                    'rules_number': len(rules)
-                }
+                results_ir_i['trees_number'].append(trees_num)
+                results_ir_i['avg_nodes_count'].append(avg_nodes_count)
+                results_ir_i['avg_tree_depth'].append(avg_tree_depth)
+                results_ir_i['min_rule_len'].append(min(rules_length))
+                results_ir_i['max_rule_len'].append(max(rules_length))
+                results_ir_i['avg_rule_len'].append(round(sum(rules_length) / len(rules_length), 4))
+                results_ir_i['rules_number'].append(len(rules))                
                 metrics = calculate_metrics(rules, test, most_common_decision)
-                results_ir_i = results_ir_i | metrics                
+                results_ir_i['support'].append(metrics['support'])
+                results_ir_i['accuracy'].append(metrics['accuracy'])
+                results_ir_i['recall'].append(metrics['recall'])
+                results_ir_i['precision'].append(metrics['precision'])         
         results_ir_rep.append(results_ir_i)    
     save_results(results_ir_rep, 'results_inner_rules')
     #endregion
