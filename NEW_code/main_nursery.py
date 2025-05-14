@@ -300,9 +300,11 @@ def save_results(results_rep: list[dict], filename: str):
         if col in ['trees_number', 'depth', 'alpha']:
             results[col] = values
         elif 'min_' in col:
+            results[col] = []
             for idx_val, val in enumerate(values):
                 results[col].append(min([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]))
         elif 'max_' in col:
+            results[col] = []
             for idx_val, val in enumerate(values):
                 results[col].append(max([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]))
         else:        
