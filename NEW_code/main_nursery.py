@@ -41,7 +41,7 @@ results_forest_keys =  [
     'accuracy', 'recall', 'precision'
 ]
 results_ir_keys = [
-    'trees_number',
+    'trees_number', 'depth', 'depth_abs', 
     'avg_nodes_count', 'avg_tree_depth', 
     'min_rule_len', 'max_rule_len', 'avg_rule_len',
     'support', 'accuracy', 'recall', 'precision',
@@ -337,7 +337,7 @@ forest.fit(X_train, y_train)
 forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
 min_required_depth = math.ceil(math.log(len(class_dict), 2))
 
-if True:
+if False:
     #region expreriments: max tree depth
     results_depth_rep = []
     for repeat in range(REPETITION):
@@ -365,8 +365,7 @@ if True:
     for repeat in range(REPETITION):
         results_imp_i = {key: [] for key in results_imp_keys}           
         for trees_number in trees_numbers:        
-            for imp_decrease in np.arange(0, 0.2, 0.05):
-                imp_decrease = round(imp_decrease, 2)
+            for imp_decrease in [0, 0.0005, 0.0010, 0.0015, 0.0020, 0.0030, 0.0035, 0.0040, 0.0045, 0.0050]:
                 print(f'Getting results for {trees_number} and impurity decrease: {imp_decrease}')
                 forest = RandomForestClassifier(n_estimators = trees_number, min_impurity_decrease = imp_decrease)
                 forest.fit(X_train, y_train)
@@ -382,7 +381,7 @@ if True:
     save_results(results_imp_rep, 'results_imp')
     #endregion
 
-if True:
+if False:
     #region expreriments: random forest
     results_forest_rep = []
     for repeat in range(REPETITION):
@@ -433,6 +432,8 @@ if True:
                 rules = set(all_rules_forest)
                 rules_length = [rule.split(then_deli)[0].count('=') for rule in rules]
                 results_ir_i['trees_number'].append(trees_num)
+                results_ir_i['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
+                results_ir_i['depth_abs'].append(forest_max_depth - depth_diff)                
                 results_ir_i['avg_nodes_count'].append(avg_nodes_count)
                 results_ir_i['avg_tree_depth'].append(avg_tree_depth)
                 results_ir_i['min_rule_len'].append(min(rules_length))
