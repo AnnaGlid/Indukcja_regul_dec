@@ -175,11 +175,90 @@ def heuristic(all_rules_forest: set, decision: str, alpha: float) -> str:
                         break
             if delete:
                 ii.remove(ii_rule)
-        d=1
-
-    d=1
     h_rule += f'{then_deli}{class_deli}{decision}'
     return h_rule
+
+def heuristic_v2(all_rules_forest: set, decision: str, alpha: float) -> list:
+    assert 0 <= alpha < 1    
+    rules_with_decision = set()
+    for rule in all_rules_forest:
+        if get_decision(rule) == decision:
+            rules_with_decision.add(rule)        
+    descriptors = set()
+    for rule in rules_with_decision:
+        descriptors.update(get_descriptors(rule))
+    desc_occurences = {desc: len(list(filter(lambda x: desc in x, rules_with_decision))) for desc in descriptors}
+    top_occurences = sorted(desc_occurences.values(), reverse=True)[:3]
+    top_descs = [next(filter(lambda x: desc_occurences[x] == i, desc_occurences)) for i in top_occurences]
+
+    rules = []
+    for top_desc in top_descs:
+        first_descriptor = True
+        h_rule = if_deli    
+        i0 = set([r for r in rules_with_decision.copy() if get_descriptors(r)])
+        ii = set([r for r in i0.copy()])        
+        while len(i0.difference(ii)) < len(i0) * (1 - alpha):
+            descriptors = set()
+            for rule in ii:
+                descriptors.update(get_descriptors(rule))
+                            
+            # remove descriptors that are in rule
+            for desc in descriptors.copy():
+                if desc in h_rule:
+                    descriptors.remove(desc)
+
+            # choose descriptor which is the most popular in ii
+            max_desc_num = 0
+            max_desc = None
+            if not first_descriptor:
+                for desc in descriptors:
+                    occurences = len(list(filter(lambda x: desc in x, ii)))
+                    if occurences > max_desc_num:
+                        max_desc_num = occurences
+                        max_desc = desc
+            if first_descriptor: 
+                max_desc = top_desc
+                occurences = len(list(filter(lambda x: max_desc in x, ii)))                
+                h_rule += max_desc
+                first_descriptor = False
+            else:
+                h_rule += f'{and_deli}{max_desc}'
+                
+            # update ii
+            or_desc = next(filter(lambda x: max_desc.startswith(x), original_attributes))
+            ii_rules_w_orig_desc = list(filter(lambda x: or_desc in x, ii))
+            max_desc_attr, max_desc_val = max_desc.split('=')
+            h_rule_descs = get_descriptors(h_rule)
+            for ii_rule in ii_rules_w_orig_desc:
+                # delete if subset
+                ii_rule_descs = get_descriptors(ii_rule)
+                if ii_rule_descs.issubset(h_rule_descs):
+                    ii.remove(ii_rule)
+                    continue
+
+                # delete if incompatibile     
+                delete = False       
+                ii_descs = list(filter(lambda x: or_desc in x, ii_rule_descs))
+                for ii_desc in ii_descs:
+                    ii_desc_attr, ii_desc_val = ii_desc.split('=')
+                    if max_desc_val == '1':
+                        if (get_variant(max_desc_attr, or_desc) == get_variant(ii_desc_attr, or_desc) and ii_desc_val == '0') \
+                            or (get_variant(max_desc_attr, or_desc) != get_variant(ii_desc_attr, or_desc) and ii_desc_val == '1'):
+                            delete = True
+                            break
+                    else:
+                        if (get_variant(max_desc_attr, or_desc) == get_variant(ii_desc_attr, or_desc) and ii_desc_val == '1'):
+                            delete = True
+                            break
+                if delete:
+                    ii.remove(ii_rule)
+            for ii_rule in ii.copy():
+                if max_desc not in ii_rule:
+                    ii.remove(ii_rule)
+        h_rule += f'{then_deli}{class_deli}{decision}'
+        rules.append(h_rule)
+    return rules
+
 
 def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: str) -> dict:
     confusion_matrix = {
@@ -264,7 +343,7 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
         'precision': round(precision, 4) if isinstance(precision, float) else precision
     }
 
-def get_results_for_forest(forest, all_rules_forest, most_common_decision: str):
+def get_results_for_forest(forest, all_rules_forest, most_common_decision: str, heu: str = 'v1'):
     results = {}
     trees_num = len(forest.estimators_)
     avg_nodes_count = round(sum(
@@ -274,12 +353,16 @@ def get_results_for_forest(forest, all_rules_forest, most_common_decision: str):
         [estimator.tree_.max_depth for estimator in forest.estimators_]
     ) / trees_num, 4)    
 
-    alpha_inc = 0.05    
-    for alpha in np.arange(0, 0.2 + alpha_inc, alpha_inc):
+    alpha_inc = 0.05 
+    max_alpha = 0.2 if heu == 'v1' else 0.5
+    for alpha in np.arange(0, max_alpha + alpha_inc, alpha_inc):
         alpha = round(alpha, 2)
         rules = []
         for decision in class_dict.values():
-            rules.append(heuristic(all_rules_forest, decision, alpha))
+            if heu == 'v1':
+                rules.append(heuristic(all_rules_forest, decision, alpha))
+            if heu == 'v2':
+                rules.extend(heuristic_v2(all_rules_forest, decision, alpha))
         rules = set(rules)
         rules_length = [rule.split(then_deli)[0].count('=') for rule in rules]
         results[alpha] = {
@@ -359,13 +442,13 @@ if False:
     save_results(results_depth_rep, 'results_depth')
     #endregion
 
-if True:
+if False:
     #region expreriments: impurity decrease
     results_imp_rep = []
     for repeat in range(REPETITION):
         results_imp_i = {key: [] for key in results_imp_keys}           
         for trees_number in trees_numbers:        
-            for imp_decrease in [0, 0.0005, 0.0010, 0.0015, 0.0020, 0.0030, 0.0035, 0.0040, 0.0045, 0.0050]:
+            for imp_decrease in [0, 0.001,  0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01]:
                 print(f'Getting results for {trees_number} and impurity decrease: {imp_decrease}')
                 forest = RandomForestClassifier(n_estimators = trees_number, min_impurity_decrease = imp_decrease)
                 forest.fit(X_train, y_train)
@@ -410,7 +493,7 @@ if False:
     save_results(results_forest_rep, 'results_forest')
     #endregion
 
-if True:
+if False:
     #region expreriments: inner rules
     results_ir_rep = []
     for repeat in range(REPETITION):
@@ -449,4 +532,25 @@ if True:
     save_results(results_ir_rep, 'results_inner_rules')
     #endregion
 
+if True:
+    #region expreriments: heuristic v2
+    results_depth_rep = []
+    for repeat in range(1):
+        results_depth_i = {key: [] for key in results_depth_keys}
+        for trees_number in trees_numbers:
+            for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
+                print(f'Getting results hv2 trees number: {trees_number} and depth: max_depth - {depth_diff}')
+                forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
+                forest.fit(X_train, y_train)
+                all_rules_forest = get_all_rules_from_forest(forest)
+                for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision, 'v2').items():
+                    results_depth_i['trees_number'].append(trees_number)
+                    results_depth_i['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
+                    results_depth_i['depth_abs'].append(forest_max_depth - depth_diff)
+                    results_depth_i['alpha'].append(alpha)
+                    for k, v in forest_results.items():
+                        results_depth_i[k].append(v)
+        results_depth_rep.append(results_depth_i)
+    save_results(results_depth_rep, 'results_hv2_depth')
+    #endregion
 print('Koniec')
