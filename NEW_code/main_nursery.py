@@ -8,18 +8,13 @@ import os
 import math
 from sklearn.metrics import accuracy_score, classification_report
 
+#region parameters
 and_deli = ' and '
 then_deli = ' then '
 if_deli = 'if '
 class_deli = 'class = '
 trees_numbers = [5, 10, 15, 20, 25, 30]
 REPETITION = 5
-
-
-cwd = os.path.dirname(os.path.realpath(__file__))
-data = pd.read_csv(fr'{cwd}\data\nursery\nursery_preprocessed.csv')
-data_original = pd.read_csv(fr'{cwd}\data\nursery\nursery.csv')
-original_attributes = data_original.columns
 
 results_depth_keys = [
     'trees_number', 'depth', 'depth_abs', 
@@ -47,13 +42,21 @@ results_ir_keys = [
     'support', 'accuracy', 'recall', 'precision',
     'rules_number'
 ]
+#endregion
+
+#region input data
+cwd = os.path.dirname(os.path.realpath(__file__))
+data = pd.read_csv(fr'{cwd}\data\nursery\nursery_preprocessed.csv')
+data_original = pd.read_csv(fr'{cwd}\data\nursery\nursery.csv')
+original_attributes = data_original.columns
+
 class_dict = {
     0: 'not_recom',
     1: 'priority',
     2: 'spec_prior'
 }
 decision_class = 'class'
-
+#endregion
 
 
 conditional = [col for col in data.columns if col != decision_class]
