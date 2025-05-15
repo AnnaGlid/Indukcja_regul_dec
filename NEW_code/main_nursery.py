@@ -44,17 +44,35 @@ results_ir_keys = [
 ]
 #endregion
 
+dataset = 'nursery'
+# dataset = 'crops'
+# dataset = 'lymphography'
+
 #region input data
 cwd = os.path.dirname(os.path.realpath(__file__))
-data = pd.read_csv(fr'{cwd}\data\nursery\nursery_preprocessed.csv')
-data_original = pd.read_csv(fr'{cwd}\data\nursery\nursery.csv')
+data = pd.read_csv(fr'{cwd}\data\{dataset}\{dataset}_preprocessed.csv')
+data_original = pd.read_csv(fr'{cwd}\data\{dataset}\{dataset}.csv')
 original_attributes = data_original.columns
 
-class_dict = {
-    0: 'not_recom',
-    1: 'priority',
-    2: 'spec_prior'
-}
+if dataset == 'nursery':
+    class_dict = {
+        0: 'not_recom',
+        1: 'priority',
+        2: 'spec_prior'
+    }
+elif dataset == 'crops':
+    class_dict = {
+        0: 'not_recom',
+        1: 'priority',
+        2: 'spec_prior'
+    }
+elif dataset == 'lymphography':
+    class_dict = {
+        0: 'not_recom',
+        1: 'priority',
+        2: 'spec_prior'
+    }
+
 decision_class = 'class'
 #endregion
 
