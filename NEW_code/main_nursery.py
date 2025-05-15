@@ -47,10 +47,15 @@ results_ir_keys = [
     'support', 'accuracy', 'recall', 'precision',
     'rules_number'
 ]
-
-
-
+class_dict = {
+    0: 'not_recom',
+    1: 'priority',
+    2: 'spec_prior'
+}
 decision_class = 'class'
+
+
+
 conditional = [col for col in data.columns if col != decision_class]
 train, test = train_test_split(data, test_size=0.3, stratify=data[decision_class])
 X_train = train.drop(columns=[decision_class])
@@ -59,11 +64,7 @@ X_test = test.drop(columns=[decision_class])
 y_test = test[decision_class]
 
 
-class_dict = {
-    0: 'not_recom',
-    1: 'priority',
-    2: 'spec_prior'
-}
+
 
 #region functions
 def extract_rules(tree, feature_names, class_names=None):
@@ -577,4 +578,5 @@ if False:
         results_imp_rep.append(results_imp_i)
     save_results(results_imp_rep, 'results_v2_imp')
     #endregion
+
 print('Koniec')
