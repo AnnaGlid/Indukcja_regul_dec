@@ -54,26 +54,8 @@ data = pd.read_csv(fr'{cwd}\data\{dataset}\{dataset}_preprocessed.csv')
 data_original = pd.read_csv(fr'{cwd}\data\{dataset}\{dataset}.csv')
 original_attributes = data_original.columns
 
-if dataset == 'nursery':
-    class_dict = {
-        0: 'not_recom',
-        1: 'priority',
-        2: 'spec_prior'
-    }
-elif dataset == 'crops':
-    class_dict = {
-        0: 'not_recom',
-        1: 'priority',
-        2: 'spec_prior'
-    }
-elif dataset == 'lymphography':
-    class_dict = {
-        0: 'not_recom',
-        1: 'priority',
-        2: 'spec_prior'
-    }
-
 decision_class = 'class'
+class_values = list(set(data[decision_class]))
 #endregion
 
 
@@ -108,7 +90,7 @@ def extract_rules(tree, feature_names, class_names=None):
         else:
             value = tree_.value[node][0]
             class_id = np.argmax(value)
-            class_label = class_dict[class_names[class_id]] if class_names is not None else class_id
+            class_label = class_names[class_id] if class_names is not None else class_id
             rule = and_deli.join(path)
             paths.append(f"{if_deli}{rule}{then_deli}{class_deli}{class_label}")
     recurse(0, [])
@@ -117,7 +99,7 @@ def extract_rules(tree, feature_names, class_names=None):
 def get_all_rules_from_forest(forest):
     all_rules = []
     for tree in forest.estimators_:
-        rules = extract_rules(tree, forest.feature_names_in_, tree.classes_)
+        rules = extract_rules(tree, forest.feature_names_in_, forest.classes_)
         all_rules.extend(rules)
     return set(all_rules)
 
@@ -284,7 +266,7 @@ def heuristic_v2(all_rules_forest: set, decision: str, alpha: float) -> list:
 
 def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: str) -> dict:
     confusion_matrix = {
-        cl: {'tp': 0, 'tn': 0, 'fp': 0, 'fn': 0} for cl in class_dict.values()
+        cl: {'tp': 0, 'tn': 0, 'fp': 0, 'fn': 0} for cl in class_values
     }
     # support, accuracy, precision, recall, f1
 
@@ -305,13 +287,13 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
                 true_decision =  row[decision_class]
                 if rule_decision == true_decision:
                     confusion_matrix[true_decision]['tp'] += 1
-                    for dec in class_dict.values():
+                    for dec in class_values:
                         if dec != true_decision:
                             confusion_matrix[dec]['tn'] += 1
                 else:
                     confusion_matrix[rule_decision]['fp'] += 1
                     confusion_matrix[true_decision]['fn'] += 1
-                    for dec in class_dict.values():
+                    for dec in class_values:
                         if dec not in [true_decision, rule_decision]:
                             confusion_matrix[dec]['tn'] += 1                    
                 covered += 1
@@ -321,13 +303,13 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
             true_decision = row[decision_class]
             if most_common_decision == true_decision:
                 confusion_matrix[true_decision]['tp'] += 1
-                for dec in class_dict.values():
+                for dec in class_values:
                     if dec != true_decision:
                         confusion_matrix[dec]['tn'] += 1
             else:
                 confusion_matrix[most_common_decision]['fp'] += 1
                 confusion_matrix[true_decision]['fn'] += 1
-                for dec in class_dict.values():
+                for dec in class_values:
                     if dec not in [true_decision, most_common_decision]:
                         confusion_matrix[dec]['tn'] += 1                    
 
@@ -337,19 +319,19 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
 
     # accuracy - correct predictions (tp) / all predictions (all rows)
     correct_predictions = 0
-    for cl in class_dict.values():
+    for cl in class_values:
         correct_predictions += confusion_matrix[cl]['tp']
     accuracy = correct_predictions / len(table)
 
     # recall - correctly classified as cl / all cl. Avg of recall of all the classes
     recall = sum([
-        confusion_matrix[cl]['tp'] / len(table.loc[table[decision_class]==cl]) for cl in class_dict.values()
-    ]) / len(class_dict.values())
+        confusion_matrix[cl]['tp'] / len(table.loc[table[decision_class]==cl]) for cl in class_values
+    ]) / len(class_values)
 
     # precision - correctly classified as cl / all classified as cl. Avg of precision of all the classes
     precision = 0
     applies = 0
-    for cl in class_dict.values():
+    for cl in class_values:
         if confusion_matrix[cl]['tp'] + confusion_matrix[cl]['fp'] != 0:
             precision += confusion_matrix[cl]['tp'] / (confusion_matrix[cl]['tp'] + confusion_matrix[cl]['fp'])
             applies += 1
@@ -380,7 +362,7 @@ def get_results_for_forest(forest, all_rules_forest, most_common_decision: str, 
     for alpha in np.arange(0, max_alpha + alpha_inc, alpha_inc):
         alpha = round(alpha, 2)
         rules = []
-        for decision in class_dict.values():
+        for decision in class_values:
             if heu == 'v1':
                 rules.append(heuristic(all_rules_forest, decision, alpha))
             if heu == 'v2':
@@ -440,7 +422,7 @@ most_common_decision = next(filter(lambda x: class_occurence[x] == max_occurence
 forest = RandomForestClassifier(n_estimators = trees_numbers[0])
 forest.fit(X_train, y_train)
 forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
-min_required_depth = math.ceil(math.log(len(class_dict), 2))
+min_required_depth = math.ceil(math.log(len(class_values), 2))
 
 if False:
     #region expreriments: max tree depth
@@ -486,7 +468,7 @@ if False:
     save_results(results_imp_rep, 'results_imp')
     #endregion
 
-if True:
+if False:
     #region expreriments: random forest
     results_forest_rep = []
     for repeat in range(REPETITION):
@@ -556,7 +538,7 @@ if False:
     save_results(results_ir_rep, 'results_inner_rules')
     #endregion
 
-if False:
+if True:
     #region expreriments: depth heuristic v2
     results_depth_rep = []
     for repeat in range(REPETITION):
