@@ -36,7 +36,7 @@ results_imp_keys = [
     'rules_number'
 ]
 results_forest_keys =  [
-    'trees_number',
+    'trees_number', 'depth', 'depth_abs',
     'avg_nodes_count', 'avg_tree_depth', 
     'accuracy', 'recall', 'precision'
 ]
@@ -368,9 +368,9 @@ def get_results_for_forest(forest, all_rules_forest, most_common_decision: str, 
         results[alpha] = {
             'avg_nodes_count': avg_nodes_count,
             'avg_tree_depth': avg_tree_depth,
-            'min_rule_len': min(rules_length),
-            'max_rule_len': max(rules_length),
-            'avg_rule_len': round(sum(rules_length) / len(rules_length), 4),
+            'min_rule_len': min(rules_length) if rules_length else None,
+            'max_rule_len': max(rules_length) if rules_length else None,
+            'avg_rule_len': round(sum(rules_length) / len(rules_length), 4) if rules_length else None,
             'rules_number': len(rules)
         }
         metrics = calculate_metrics(rules, test, most_common_decision)
@@ -427,7 +427,7 @@ if False:
         results_depth_i = {key: [] for key in results_depth_keys}
         for trees_number in trees_numbers:
             for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
-                print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}')
+                print(f'Getting results: rep {repeat}, trees number: {trees_number} and depth: max_depth - {depth_diff}')
                 forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
                 forest.fit(X_train, y_train)
                 all_rules_forest = get_all_rules_from_forest(forest)
@@ -449,7 +449,7 @@ if False:
         results_imp_i = {key: [] for key in results_imp_keys}           
         for trees_number in trees_numbers:        
             for imp_decrease in [0, 0.001,  0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01]:
-                print(f'Getting results for {trees_number} and impurity decrease: {imp_decrease}')
+                print(f'Getting results: rep {repeat}, for {trees_number} and impurity decrease: {imp_decrease}')
                 forest = RandomForestClassifier(n_estimators = trees_number, min_impurity_decrease = imp_decrease)
                 forest.fit(X_train, y_train)
                 all_rules_forest = get_all_rules_from_forest(forest)
@@ -464,14 +464,14 @@ if False:
     save_results(results_imp_rep, 'results_imp')
     #endregion
 
-if False:
+if True:
     #region expreriments: random forest
     results_forest_rep = []
     for repeat in range(REPETITION):
         results_forest_i = {key: [] for key in results_forest_keys}
         for trees_number in trees_numbers:
             for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
-                print(f'Getting results trees number: {trees_number} and depth: {depth_diff}- RandomForest')
+                print(f'Getting results: rep {repeat}, trees number: {trees_number} and depth: {depth_diff}- RandomForest')
                 forest = RandomForestClassifier(n_estimators = trees_number)
                 forest.fit(X_train, y_train)           
                 y_pred_test = forest.predict(X_test)       
@@ -484,6 +484,8 @@ if False:
                     [estimator.tree_.max_depth for estimator in forest.estimators_]
                 ) / trees_num, 4)           
                 results_forest_i['trees_number'].append(trees_number)
+                results_forest_i['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
+                results_forest_i['depth_abs'].append(forest_max_depth - depth_diff)                
                 results_forest_i['avg_nodes_count'].append(avg_nodes_count)
                 results_forest_i['avg_tree_depth'].append(avg_tree_depth)
                 results_forest_i['accuracy'].append(class_report['accuracy'])
@@ -500,7 +502,7 @@ if False:
         results_ir_i = {key: [] for key in results_ir_keys}
         for trees_number in trees_numbers:
             for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
-                print(f'Getting results trees number: {trees_number} and depth: max_depth - {depth_diff}: Inner Rules')
+                print(f'Getting results: rep {repeat}, trees number: {trees_number} and depth: max_depth - {depth_diff}: Inner Rules')
                 forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
                 forest.fit(X_train, y_train)
                 all_rules_forest = get_all_rules_from_forest(forest)
@@ -532,14 +534,14 @@ if False:
     save_results(results_ir_rep, 'results_inner_rules')
     #endregion
 
-if True:
-    #region expreriments: heuristic v2
+if False:
+    #region expreriments: depth heuristic v2
     results_depth_rep = []
-    for repeat in range(1):
+    for repeat in range(REPETITION):
         results_depth_i = {key: [] for key in results_depth_keys}
         for trees_number in trees_numbers:
             for depth_diff in range(0, forest_max_depth - min_required_depth + 1):        
-                print(f'Getting results hv2 trees number: {trees_number} and depth: max_depth - {depth_diff}')
+                print(f'Getting results: rep {repeat}, hv2 trees number: {trees_number} and depth: max_depth - {depth_diff}')
                 forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
                 forest.fit(X_train, y_train)
                 all_rules_forest = get_all_rules_from_forest(forest)
@@ -552,5 +554,27 @@ if True:
                         results_depth_i[k].append(v)
         results_depth_rep.append(results_depth_i)
     save_results(results_depth_rep, 'results_hv2_depth')
+    #endregion
+
+if False:
+    #region expreriments: impurity decrease heuristic v2: 
+    results_imp_rep = []
+    for repeat in range(REPETITION):
+        results_imp_i = {key: [] for key in results_imp_keys}           
+        for trees_number in trees_numbers:        
+            for imp_decrease in [0, 0.001,  0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.015, 0.02]:
+                print(f'Getting results: rep {repeat}, for {trees_number} and impurity decrease: {imp_decrease}')
+                forest = RandomForestClassifier(n_estimators = trees_number, min_impurity_decrease = imp_decrease)
+                forest.fit(X_train, y_train)
+                all_rules_forest = get_all_rules_from_forest(forest)
+                d=1
+                for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision, 'v2').items():
+                    results_imp_i['trees_number'].append(trees_number)
+                    results_imp_i['impurity_decrease'].append(imp_decrease)
+                    results_imp_i['alpha'].append(alpha)
+                    for k, v in forest_results.items():
+                        results_imp_i[k].append(v)
+        results_imp_rep.append(results_imp_i)
+    save_results(results_imp_rep, 'results_v2_imp')
     #endregion
 print('Koniec')
