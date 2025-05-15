@@ -424,7 +424,7 @@ forest.fit(X_train, y_train)
 forest_max_depth = max([estimator.tree_.max_depth for estimator in forest.estimators_])
 min_required_depth = math.ceil(math.log(len(class_values), 2))
 
-if False:
+if True:
     #region expreriments: max tree depth
     results_depth_rep = []
     for repeat in range(REPETITION):
@@ -443,10 +443,10 @@ if False:
                     for k, v in forest_results.items():
                         results_depth_i[k].append(v)
         results_depth_rep.append(results_depth_i)
-    save_results(results_depth_rep, 'results_depth')
+    save_results(results_depth_rep, f'{dataset}_results_depth')
     #endregion
 
-if False:
+if True:
     #region expreriments: impurity decrease
     results_imp_rep = []
     for repeat in range(REPETITION):
@@ -465,7 +465,7 @@ if False:
                     for k, v in forest_results.items():
                         results_imp_i[k].append(v)
         results_imp_rep.append(results_imp_i)
-    save_results(results_imp_rep, 'results_imp')
+    save_results(results_imp_rep, f'{dataset}_results_imp')
     #endregion
 
 if False:
@@ -496,7 +496,7 @@ if False:
                 results_forest_i['recall'].append(class_report['macro avg']['recall'])
                 results_forest_i['precision'].append(class_report['macro avg']['precision'])
         results_forest_rep.append(results_forest_i)
-    save_results(results_forest_rep, 'results_forest')
+    save_results(results_forest_rep, f'{dataset}_results_forest')
     #endregion
 
 if False:
@@ -535,7 +535,7 @@ if False:
                 results_ir_i['recall'].append(metrics['recall'])
                 results_ir_i['precision'].append(metrics['precision'])         
         results_ir_rep.append(results_ir_i)    
-    save_results(results_ir_rep, 'results_inner_rules')
+    save_results(results_ir_rep, f'{dataset}_results_inner_rules')
     #endregion
 
 if True:
@@ -557,10 +557,10 @@ if True:
                     for k, v in forest_results.items():
                         results_depth_i[k].append(v)
         results_depth_rep.append(results_depth_i)
-    save_results(results_depth_rep, 'results_hv2_depth')
+    save_results(results_depth_rep, f'{dataset}_results_hv2_depth')
     #endregion
 
-if False:
+if True:
     #region expreriments: impurity decrease heuristic v2: 
     results_imp_rep = []
     for repeat in range(REPETITION):
@@ -579,7 +579,7 @@ if False:
                     for k, v in forest_results.items():
                         results_imp_i[k].append(v)
         results_imp_rep.append(results_imp_i)
-    save_results(results_imp_rep, 'results_v2_imp')
+    save_results(results_imp_rep, f'{dataset}_results_v2_imp')
     #endregion
 
 print('Koniec')
