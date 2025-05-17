@@ -44,8 +44,8 @@ results_ir_keys = [
 ]
 #endregion
 
-dataset = 'nursery'
-# dataset = 'crops'
+# dataset = 'nursery'
+dataset = 'crops'
 # dataset = 'lymphography'
 
 #region input data
@@ -261,6 +261,7 @@ def heuristic_v2(all_rules_forest: set, decision: str, alpha: float) -> list:
                     ii.remove(ii_rule)
         h_rule += f'{then_deli}{class_deli}{decision}'
         rules.append(h_rule)
+
     return rules
 
 
@@ -364,9 +365,12 @@ def get_results_for_forest(forest, all_rules_forest, most_common_decision: str, 
         rules = []
         for decision in class_values:
             if heu == 'v1':
-                rules.append(heuristic(all_rules_forest, decision, alpha))
+                h_rule = heuristic(all_rules_forest, decision, alpha)
+                if get_descriptors(h_rule):
+                    rules.append(h_rule)
             if heu == 'v2':
-                rules.extend(heuristic_v2(all_rules_forest, decision, alpha))
+                h2_rules = heuristic_v2(all_rules_forest, decision, alpha)                
+                rules.extend([r for r in h2_rules if get_descriptors(r)])
         rules = set(rules)
         rules_length = [rule.split(then_deli)[0].count('=') for rule in rules]
         results[alpha] = {
@@ -468,7 +472,7 @@ if True:
     save_results(results_imp_rep, f'{dataset}_results_imp')
     #endregion
 
-if False:
+if True:
     #region expreriments: random forest
     results_forest_rep = []
     for repeat in range(REPETITION):
@@ -499,7 +503,7 @@ if False:
     save_results(results_forest_rep, f'{dataset}_results_forest')
     #endregion
 
-if False:
+if True:
     #region expreriments: inner rules
     results_ir_rep = []
     for repeat in range(REPETITION):
@@ -567,7 +571,7 @@ if True:
         results_imp_i = {key: [] for key in results_imp_keys}           
         for trees_number in trees_numbers:        
             for imp_decrease in [0, 0.001,  0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.015, 0.02]:
-                print(f'Getting results: rep {repeat}, for {trees_number} and impurity decrease: {imp_decrease}')
+                print(f'Getting results: rep {repeat}, h2 for {trees_number} and impurity decrease: {imp_decrease}')
                 forest = RandomForestClassifier(n_estimators = trees_number, min_impurity_decrease = imp_decrease)
                 forest.fit(X_train, y_train)
                 all_rules_forest = get_all_rules_from_forest(forest)
