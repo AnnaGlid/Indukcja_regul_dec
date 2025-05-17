@@ -23,7 +23,7 @@ malign lymph,deformed,no,no,no,no,no,no,yes,0,2,oval,lac. central,lacunar,coarse
 malign lymph,displaced,no,no,no,yes,yes,no,yes,0,3,round,lac. marginal,lac. central,diluted,vesicles,yes,yes,30-39
 metastases,displaced,yes,no,no,yes,yes,no,yes,0,4,round,lac. central,lac. margin,coarse,chalices,yes,yes,10-19
 metastases,deformed,yes,no,no,no,no,no,yes,0,2,oval,lacunar,lacunar,diluted,no,no,no,0-9
-malign lymph,deformed,no,no,no,no,no,no,yes,1,1,oval,lacunar,lacunar,faint,vesicles,no,yes,>=70
+malign lymph,deformed,no,no,no,no,no,no,yes,1,1,oval,lacunar,lacunar,faint,vesicles,no,yes,>70
 malign lymph,deformed,no,no,no,no,yes,no,no,0,3,oval,lac. marginal,lac. margin,faint,vesicles,yes,yes,10-19
 malign lymph,displaced,no,no,no,no,yes,no,yes,0,3,round,lac. central,lacunar,coarse,vesicles,yes,yes,30-39
 malign lymph,displaced,no,no,no,no,no,no,yes,0,3,oval,lac. central,lac. central,faint,vesicles,yes,yes,0-9
@@ -57,7 +57,7 @@ metastases,arched,yes,yes,no,yes,yes,no,no,0,2,oval,lac. marginal,lac. margin,co
 malign lymph,displaced,no,no,no,no,no,no,yes,0,2,oval,lac. marginal,lac. margin,drop-like,vesicles,yes,no,0-9
 malign lymph,arched,no,no,no,no,no,no,yes,0,3,oval,lac. central,lacunar,faint,vesicles,yes,yes,30-39
 metastases,displaced,yes,no,no,yes,yes,no,yes,0,2,round,lacunar,lac. margin,grainy,vesicles,yes,yes,30-39
-malign lymph,displaced,yes,yes,yes,yes,yes,yes,yes,0,4,round,lac. central,lac. central,stripped,vesicles,yes,yes,>=70
+malign lymph,displaced,yes,yes,yes,yes,yes,yes,yes,0,4,round,lac. central,lac. central,stripped,vesicles,yes,yes,>70
 metastases,arched,yes,yes,no,yes,yes,no,yes,0,3,round,lac. marginal,lac. margin,faint,vesicles,yes,yes,10-19
 malign lymph,displaced,no,no,no,no,no,no,yes,0,4,oval,lacunar,lac. central,stripped,vesicles,yes,yes,60-69
 metastases,deformed,yes,yes,no,yes,yes,no,yes,0,3,oval,lacunar,lac. margin,coarse,no,yes,yes,0-9
