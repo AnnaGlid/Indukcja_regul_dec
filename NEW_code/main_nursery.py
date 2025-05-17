@@ -45,8 +45,8 @@ results_ir_keys = [
 #endregion
 
 # dataset = 'nursery'
-dataset = 'crops'
-# dataset = 'lymphography'
+# dataset = 'crops'
+dataset = 'lymphography'
 
 #region input data
 cwd = os.path.dirname(os.path.realpath(__file__))
