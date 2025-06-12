@@ -20,14 +20,14 @@ results_depth_keys = [
     'trees_number', 'depth', 'depth_abs', 
     'avg_nodes_count', 'avg_tree_depth', 
     'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision',
+    'coverage', 'accuracy', 'recall', 'precision',
     'rules_number'
 ]
 results_imp_keys = [
     'trees_number', 'impurity_decrease', 
     'avg_nodes_count', 'avg_tree_depth', 
     'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision',
+    'coverage', 'accuracy', 'recall', 'precision',
     'rules_number'
 ]
 results_forest_keys =  [
@@ -39,7 +39,7 @@ results_ir_keys = [
     'trees_number', 'depth', 'depth_abs', 
     'avg_nodes_count', 'avg_tree_depth', 
     'min_rule_len', 'max_rule_len', 'avg_rule_len',
-    'support', 'accuracy', 'recall', 'precision',
+    'coverage', 'accuracy', 'recall', 'precision',
     'rules_number'
 ]
 #endregion
@@ -269,7 +269,7 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
     confusion_matrix = {
         cl: {'tp': 0, 'tn': 0, 'fp': 0, 'fn': 0} for cl in class_values
     }
-    # support, accuracy, precision, recall, f1
+    # coverage, accuracy, precision, recall, f1
 
     def covers(rule, row) -> bool:
         descs = get_descriptors(rule)
@@ -315,8 +315,8 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
                         confusion_matrix[dec]['tn'] += 1                    
 
 
-    # support - covered rows (without decision) to all the rows
-    support = covered / len(table)
+    # coverage - covered rows (without decision) to all the rows
+    coverage = covered / len(table)
 
     # accuracy - correct predictions (tp) / all predictions (all rows)
     correct_predictions = 0
@@ -342,7 +342,7 @@ def calculate_metrics(rule_set: set, table: pd.DataFrame, most_common_decision: 
         precision = 'NaN'
     
     return {
-        'support': round(support, 4),
+        'coverage': round(coverage, 4),
         'accuracy': round(accuracy, 4) if isinstance(accuracy, float) else accuracy,
         'recall': round(recall, 4),
         'precision': round(precision, 4) if isinstance(precision, float) else precision
@@ -399,7 +399,7 @@ def save_results(results_rep: list[dict], filename: str):
             for idx_val, val in enumerate(values):
                 results[col].append(max([results_rep[idx_rep][col][idx_val] for idx_rep in range(REPETITION)]))
         else:        
-            if col in ['support', 'accuracy', 'precision', 'recall']:
+            if col in ['coverage', 'accuracy', 'precision', 'recall']:
                 new_col = 'avg_' + col
                 results['min_'+col] = []
                 results['max_'+col] = []
@@ -534,7 +534,7 @@ if True:
                 results_ir_i['avg_rule_len'].append(round(sum(rules_length) / len(rules_length), 4))
                 results_ir_i['rules_number'].append(len(rules))                
                 metrics = calculate_metrics(rules, test, most_common_decision)
-                results_ir_i['support'].append(metrics['support'])
+                results_ir_i['coverage'].append(metrics['coverage'])
                 results_ir_i['accuracy'].append(metrics['accuracy'])
                 results_ir_i['recall'].append(metrics['recall'])
                 results_ir_i['precision'].append(metrics['precision'])         
