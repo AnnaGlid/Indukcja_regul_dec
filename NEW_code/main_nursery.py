@@ -9,25 +9,13 @@ import math
 from sklearn.metrics import accuracy_score, classification_report
 from datetime import datetime
 
-# import torch
-# print(torch.cuda.is_available())
-# print(torch.__version__)
-# print(torch.version.cuda)
-# print(torch.backends.cudnn.version())
-# print(torch.cuda.get_device_name(0))
-
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# print(f"Using device: {device}")
-
-
 #region parameters
 and_deli = ' and '
 then_deli = ' then '
 if_deli = 'if '
 class_deli = 'class = '
 trees_numbers = list(range(10, 101, 10))
-# ALPHA = 0.25
-ALPHA = 0.006
+ALPHA = 0.333
 REPETITION = 5
 
 results_depth_keys = [
@@ -215,7 +203,7 @@ for dataset in ['nursery','crops','lymphography']:
             first_descriptor = True
             h_rule = if_deli    
             i0 = set([r for r in rules_with_decision.copy() if get_descriptors(r)])
-            ii = set([r for r in i0.copy()])        
+            ii = set([r for r in i0.copy()])
             while len(i0.difference(ii)) < len(i0) * (1 - alpha):
                 descriptors = set()
                 for rule in ii:
@@ -375,8 +363,8 @@ for dataset in ['nursery','crops','lymphography']:
         # alpha_inc = 0.05 
         # max_alpha = 0.2 if heu == 'v1' else 0.5
         # for alpha in np.arange(0, max_alpha + alpha_inc, alpha_inc):
-        # for alpha in [ALPHA]:
-        for alpha in np.arange(0, 0.4 + 0.05, 0.05):
+        for alpha in [ALPHA]:
+        # for alpha in np.arange(0, 0.4 + 0.05, 0.05):
             alpha = round(alpha, 3)
             rules = []
             for decision in class_values:
@@ -587,8 +575,7 @@ for dataset in ['nursery','crops','lymphography']:
         results_imp_rep = []
         for repeat in range(REPETITION):
             results_imp_i = {key: [] for key in results_imp_keys}           
-            for trees_number in trees_numbers:        
-                # for imp_decrease in [0, 0.001,  0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.015, 0.02]:
+            for trees_number in trees_numbers:
                 for imp_decrease in [0, 0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.022, 0.024, 0.026, 0.028, 0.03]:
                     print(f'[{datetime.now().strftime('%H:%M:%S')}] [{dataset}] Getting results: rep {repeat}, h2 for {trees_number} and impurity decrease: {imp_decrease}')
                     forest = RandomForestClassifier(n_estimators = trees_number, min_impurity_decrease = imp_decrease)
