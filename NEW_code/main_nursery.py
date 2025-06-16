@@ -15,7 +15,7 @@ then_deli = ' then '
 if_deli = 'if '
 class_deli = 'class = '
 trees_numbers = list(range(10, 101, 10))
-ALPHA = 0.333
+ALPHA = 0.2
 REPETITION = 5
 
 results_depth_keys = [
@@ -51,7 +51,7 @@ results_ir_keys = [
 # dataset = 'crops_more_bins'
 # dataset = 'lymphography'
 
-for dataset in ['nursery','crops','lymphography']:
+for dataset in ['behaviour', 'crops', 'lymphography', 'nursery']:
 
     #region input data
     cwd = os.path.dirname(os.path.realpath(__file__))
@@ -364,8 +364,9 @@ for dataset in ['nursery','crops','lymphography']:
         # max_alpha = 0.2 if heu == 'v1' else 0.5
         # for alpha in np.arange(0, max_alpha + alpha_inc, alpha_inc):
         for alpha in [ALPHA]:
-        # for alpha in np.arange(0, 0.4 + 0.05, 0.05):
-            alpha = round(alpha, 3)
+        # for alpha in np.arange(0, 0.4 + 0.02, 0.02):
+        # for alpha in [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.25, 0.3]:
+            # alpha = round(alpha, 3)
             rules = []
             for decision in class_values:
                 if heu == 'v1':
@@ -552,7 +553,7 @@ for dataset in ['nursery','crops','lymphography']:
         for repeat in range(REPETITION):
             results_depth_i = {key: [] for key in results_depth_keys}
             for trees_number in trees_numbers:
-                for depth_diff in range(0, forest_max_depth - min_required_depth + 1):
+                for depth_diff in range(forest_max_depth // 3, forest_max_depth - min_required_depth + 1):
                     print(f'[{datetime.now().strftime('%H:%M:%S')}] [{dataset}] Getting results: rep {repeat}, hv2 trees number: {trees_number} and depth: max_depth - {depth_diff}')
                     forest = RandomForestClassifier(n_estimators = trees_number, max_depth = forest_max_depth-depth_diff)
                     forest.fit(X_train, y_train)
