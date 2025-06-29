@@ -15,9 +15,17 @@ then_deli = ' then '
 if_deli = 'if '
 class_deli = 'class = '
 trees_numbers = list(range(10, 101, 10))
-ALPHA = 0.2
+ALPHA = 0.16
 REPETITION = 5
+# REPETITION = 3
 
+results_all_keys = [
+    'trees_number', 'depth', 'depth_abs', 'impurity_decrease',
+    'avg_nodes_count', 'avg_tree_depth', 'rules_per_class',
+    'alpha', 'min_rule_len', 'max_rule_len', 'avg_rule_len',
+    'coverage', 'accuracy', 'recall', 'precision',
+    'rules_number'
+]
 results_depth_keys = [
     'trees_number', 'depth', 'depth_abs', 
     'avg_nodes_count', 'avg_tree_depth', 'rules_per_class',
@@ -51,7 +59,17 @@ results_ir_keys = [
 # dataset = 'crops_more_bins'
 # dataset = 'lymphography'
 
+# for dataset in ['behaviour', 'crops', 'lymphography', 'nursery']:
 for dataset in ['behaviour', 'crops', 'lymphography', 'nursery']:
+    if dataset == 'nursery':
+        ALPHA = 0.16
+    elif dataset == 'lymphography':
+        ALPHA = 0.12
+
+    elif dataset == 'crops':
+        ALPHA = 0.04
+    elif dataset == 'behaviour':
+        ALPHA = 0.06
 
     #region input data
     cwd = os.path.dirname(os.path.realpath(__file__))
@@ -366,7 +384,7 @@ for dataset in ['behaviour', 'crops', 'lymphography', 'nursery']:
         for alpha in [ALPHA]:
         # for alpha in np.arange(0, 0.4 + 0.02, 0.02):
         # for alpha in [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.25, 0.3]:
-            # alpha = round(alpha, 3)
+            alpha = round(alpha, 3)
             rules = []
             for decision in class_values:
                 if heu == 'v1':
@@ -547,7 +565,7 @@ for dataset in ['behaviour', 'crops', 'lymphography', 'nursery']:
         save_results(results_ir_rep, f'{dataset}_results_inner_rules')
         #endregion
 
-    if True:
+    if False:
         #region expreriments: depth heuristic v2
         results_depth_rep = []
         for repeat in range(REPETITION):
@@ -562,6 +580,7 @@ for dataset in ['behaviour', 'crops', 'lymphography', 'nursery']:
                         for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision, 'v2', rules_per_class).items():
                             results_depth_i['trees_number'].append(trees_number)
                             results_depth_i['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
+                     
                             results_depth_i['depth_abs'].append(forest_max_depth - depth_diff)
                             results_depth_i['alpha'].append(alpha)
                             results_depth_i['rules_per_class'].append(rules_per_class)
@@ -571,7 +590,7 @@ for dataset in ['behaviour', 'crops', 'lymphography', 'nursery']:
         save_results(results_depth_rep, f'ALPHA{ALPHA}__{dataset}_results_hv2_depth')
         #endregion
 
-    if True:
+    if False:
         #region expreriments: impurity decrease heuristic v2: 
         results_imp_rep = []
         for repeat in range(REPETITION):
@@ -593,5 +612,40 @@ for dataset in ['behaviour', 'crops', 'lymphography', 'nursery']:
             results_imp_rep.append(results_imp_i)
         save_results(results_imp_rep, f'ALPHA{ALPHA}__{dataset}_results_v2_imp')
         #endregion
+
+    if True:
+        #region experiments: depth and imp decrease together. h2
+        results_depth_rep = []
+        for repeat in range(3): # REPETITION
+            train, test = train_test_split(data, test_size=0.3, stratify=data[decision_class])
+            X_train = train.drop(columns=[decision_class])
+            y_train = train[decision_class]
+            X_test = test.drop(columns=[decision_class])
+            y_test = test[decision_class]                  
+
+            results_all_i = {key: [] for key in results_all_keys}
+            # for trees_number in trees_numbers:
+            for trees_number in range(20, 101, 20):
+                for imp_decrease in [0, 0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.022, 0.024, 0.026, 0.028, 0.03][::6]:
+                    # for depth_diff in range(0, forest_max_depth - min_required_depth + 1):
+                    for depth_diff in [0, (forest_max_depth - min_required_depth) // 3, (forest_max_depth - min_required_depth) * 2 // 3, forest_max_depth - min_required_depth]:
+                        print(f'[{datetime.now().strftime('%H:%M:%S')}] [{dataset}] Getting results: rep {repeat}, hv2 trees number: {trees_number}, imp: {imp_decrease} and depth: max_depth - {depth_diff}')
+                        forest = RandomForestClassifier(n_estimators = trees_number, 
+                                                        max_depth = forest_max_depth-depth_diff, 
+                                                        min_impurity_decrease=imp_decrease)
+                        forest.fit(X_train, y_train)
+                        all_rules_forest = get_all_rules_from_forest(forest)
+                        for rules_per_class in range(1, 11):
+                            for alpha, forest_results in get_results_for_forest(forest, all_rules_forest, most_common_decision, 'v2', rules_per_class).items():
+                                results_all_i['trees_number'].append(trees_number)
+                                results_all_i['depth'].append('max_depth' if not depth_diff else f'max_depth - {depth_diff}')
+                                results_all_i['impurity_decrease'].append(imp_decrease)
+                                results_all_i['depth_abs'].append(forest_max_depth - depth_diff)
+                                results_all_i['alpha'].append(alpha)
+                                results_all_i['rules_per_class'].append(rules_per_class)
+                                for k, v in forest_results.items():
+                                    results_all_i[k].append(v)
+                results_depth_rep.append(results_all_i)
+            save_results(results_depth_rep, f'ALPHA{ALPHA}__{dataset}_results_hv2_all')
 
     print('Koniec')
